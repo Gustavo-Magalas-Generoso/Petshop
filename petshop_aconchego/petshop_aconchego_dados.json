@@ -1,0 +1,67 @@
+{
+  "products": [
+    {
+      "name": "Shampoo",
+      "unit": "ml",
+      "stock": 950,
+      "critical_level": 200,
+      "estimated_usage": 50.0
+    },
+    {
+      "name": "Condicionador",
+      "unit": "ml",
+      "stock": 770,
+      "critical_level": 150,
+      "estimated_usage": 30.0
+    },
+    {
+      "name": "Toalha descartavel",
+      "unit": "un",
+      "stock": 49,
+      "critical_level": 10,
+      "estimated_usage": 1.0
+    },
+    {
+      "name": "Lamina",
+      "unit": "un",
+      "stock": 20,
+      "critical_level": 5,
+      "estimated_usage": 0.0
+    }
+  ],
+  "appointments": [
+    {
+      "id": 1,
+      "tutor": "teste",
+      "pet": "sla",
+      "breed": "Sem raca definida",
+      "service": "Banho",
+      "date": "26/05/2026",
+      "start_time": "10:30",
+      "duration": 60,
+      "buffer": 15,
+      "price": 75.0,
+      "employee": "Joao",
+      "payment_status": "Confirmado",
+      "service_status": "Cancelado",
+      "intercorrences": []
+    },
+    {
+      "id": 2,
+      "tutor": "Gustavo",
+      "pet": "Chris",
+      "breed": "Sem raca definida",
+      "service": "Banho",
+      "date": "26/05/2026",
+      "start_time": "12:30",
+      "duration": 60,
+      "buffer": 15,
+      "price": 75.0,
+      "employee": "Ana",
+      "payment_status": "Confirmado",
+      "service_status": "Concluido",
+      "intercorrences": []
+    }
+  ],
+  "stock_break_risks": 0
+}
