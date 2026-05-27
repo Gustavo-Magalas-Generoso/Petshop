@@ -7,16 +7,6 @@ from tkinter import BOTH, END, LEFT, RIGHT, W, X, Button, Entry, Frame, Label, L
 
 
 APP_TITLE = "Pet Shop Aconchego"
-
-BG = "#0f172a"
-CARD = "#1e293b"
-CARD_LIGHT = "#334155"
-PRIMARY = "#38bdf8"
-SUCCESS = "#22c55e"
-DANGER = "#ef4444"
-WARNING = "#f59e0b"
-TEXT = "#f8fafc"
-MUTED = "#94a3b8"
 DATA_FILE = Path(__file__).with_name("petshop_aconchego_dados.json")
 BUFFER_MINUTES = 15
 WORK_DAY_START = "08:00"
@@ -196,11 +186,20 @@ class Store:
         return missing
 
     def consume_inputs(self, service):
+        used_items = []
+
         for product_name, quantity in SERVICE_INPUTS[service].items():
             product = self.product_by_name(product_name)
+
             if product:
                 product.stock -= quantity
                 product.estimated_usage += quantity
+
+                used_items.append(
+                    f"{product_name}: {quantity} {product.unit}"
+                )
+
+        return used_items
 
 
 class PetShopApp:
@@ -212,100 +211,27 @@ class PetShopApp:
         self.countdown_seconds = 0
         self.timer_running = False
 
-        root.title(APP_TITLE)
-        root.geometry("1280x760")
-        root.minsize(1100, 700)
-        root.configure(bg=BG)
+        # Timers individuais por atendimento
+        self.appointment_timers = {}
+        self.running_timers = set()
+        used_items = []
 
-        self.configure_styles()
+        root.title(APP_TITLE)
+        root.geometry("1120x720")
+        root.minsize(960, 620)
+
         self.build_layout()
+        messagebox.showinfo(
+            "Servico finalizado",
+            "Itens utilizados:\n\n" + "\n".join(used_items)
+        )
         self.refresh_all()
 
-
-    def configure_styles(self):
-        style = ttk.Style()
-
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
-
-        style.configure(
-            ".",
-            background=BG,
-            foreground=TEXT,
-            fieldbackground=CARD,
-            font=("Segoe UI", 10),
-        )
-
-        style.configure("TNotebook", background=BG, borderwidth=0)
-
-        style.configure(
-            "TNotebook.Tab",
-            background=CARD,
-            foreground=TEXT,
-            padding=(18, 10),
-            font=("Segoe UI", 10, "bold"),
-        )
-
-        style.map(
-            "TNotebook.Tab",
-            background=[("selected", PRIMARY)],
-            foreground=[("selected", BG)],
-        )
-
-        style.configure(
-            "Treeview",
-            background=CARD,
-            foreground=TEXT,
-            rowheight=30,
-            fieldbackground=CARD,
-            borderwidth=0,
-            font=("Segoe UI", 10),
-        )
-
-        style.configure(
-            "Treeview.Heading",
-            background=PRIMARY,
-            foreground=BG,
-            font=("Segoe UI", 10, "bold"),
-            relief="flat",
-        )
-
-        style.map(
-            "Treeview",
-            background=[("selected", PRIMARY)],
-            foreground=[("selected", BG)],
-        )
-
-    def modern_button(self, parent, text, command, color=PRIMARY):
-        return Button(
-            parent,
-            text=text,
-            command=command,
-            bg=color,
-            fg=BG,
-            activebackground=color,
-            activeforeground=BG,
-            relief="flat",
-            bd=0,
-            cursor="hand2",
-            padx=10,
-            pady=10,
-            font=("Segoe UI", 10, "bold"),
-        )
-
     def build_layout(self):
-        top = Frame(self.root, padx=18, pady=14, bg=BG)
+        top = Frame(self.root, padx=14, pady=10)
         top.pack(fill=X)
 
-        Label(
-            top,
-            text="🐾 PET SHOP ACONCHEGO",
-            font=("Segoe UI", 22, "bold"),
-            bg=BG,
-            fg=PRIMARY,
-        ).pack(side=LEFT)
+        Label(top, text=APP_TITLE, font=("Arial", 18, "bold")).pack(side=LEFT)
         Label(top, text="Perfil:").pack(side=LEFT, padx=(30, 6))
         profile_box = ttk.Combobox(top, textvariable=self.current_profile, values=list(ACCESS), state="readonly", width=18)
         profile_box.pack(side=LEFT)
@@ -319,10 +245,10 @@ class PetShopApp:
         self.operation_tab = Frame(self.tabs, padx=12, pady=12)
         self.dashboard_tab = Frame(self.tabs, padx=12, pady=12)
 
-        self.tabs.add(self.agenda_tab, text="📅 Agenda")
-        self.tabs.add(self.stock_tab, text="📦 Estoque")
-        self.tabs.add(self.operation_tab, text="✂️ Operacional")
-        self.tabs.add(self.dashboard_tab, text="📊 Dashboard")
+        self.tabs.add(self.agenda_tab, text="Agenda")
+        self.tabs.add(self.stock_tab, text="Estoque")
+        self.tabs.add(self.operation_tab, text="Operacional")
+        self.tabs.add(self.dashboard_tab, text="Dashboard")
 
         self.build_agenda_tab()
         self.build_stock_tab()
@@ -351,8 +277,7 @@ class PetShopApp:
         self.add_labeled_entry(form, "Hora (hh:mm)", self.time_var)
 
         Label(form, textvariable=self.preview_var, justify=LEFT, fg="#1f5f8b").pack(anchor=W, pady=8)
-        self.modern_button(form, "Calcular tempo", self.update_preview, PRIMARY).pack(fill=X, pady=6)
-        self.modern_button(form, "Agendar", self.create_appointment, SUCCESS).pack(fill=X, pady=6)
+        Button(form, text="Agendar", command=self.create_appointment).pack(fill=X, pady=4)
 
         list_frame = LabelFrame(self.agenda_tab, text="Agenda por funcionario", padx=10, pady=10)
         list_frame.pack(side=LEFT, fill=BOTH, expand=True)
@@ -379,8 +304,9 @@ class PetShopApp:
 
         action_bar = Frame(list_frame, pady=8)
         action_bar.pack(fill=X)
-        self.modern_button(action_bar, "Pagamento confirmado", self.confirm_payment, SUCCESS).pack(side=LEFT, padx=4)
-        self.modern_button(action_bar, "Cancelar", self.cancel_appointment, DANGER).pack(side=LEFT, padx=4)
+        Button(action_bar, text="Pagamento confirmado", command=self.confirm_payment).pack(side=LEFT, padx=4)
+        Button(action_bar, text="Cancelar", command=self.cancel_appointment).pack(side=LEFT, padx=4)
+        Button(action_bar, text="Excluir", command=self.delete_appointment).pack(side=LEFT, padx=4)
 
     def build_stock_tab(self):
         left = LabelFrame(self.stock_tab, text="Produtos", padx=10, pady=10)
@@ -423,8 +349,9 @@ class PetShopApp:
         self.operation_selected_var = StringVar(value="Nenhum servico selecionado")
         self.timer_var = StringVar(value="00:00")
         Label(right, textvariable=self.operation_selected_var, wraplength=260, justify=LEFT).pack(anchor=W, pady=4)
-        Label(right, textvariable=self.timer_var, font=("Segoe UI", 36, "bold"), fg="#2c3e50").pack(pady=14)
+        Label(right, textvariable=self.timer_var, font=("Arial", 28, "bold"), fg="#2c3e50").pack(pady=14)
         Button(right, text="Iniciar cronometro", command=self.start_timer).pack(fill=X, pady=4)
+        Button(right, text="Pausar cronometro", command=self.pause_timer).pack(fill=X, pady=4)
         Button(right, text="Finalizar servico", command=self.finish_service).pack(fill=X, pady=4)
 
         Label(right, text="Intercorrencias").pack(anchor=W, pady=(16, 4))
@@ -434,29 +361,11 @@ class PetShopApp:
 
     def build_dashboard_tab(self):
         self.dashboard_text = StringVar()
-        Label(self.dashboard_tab, textvariable=self.dashboard_text, justify=LEFT, font=("Consolas", 13), bg=BG, fg=TEXT).pack(anchor=W, fill=BOTH)
-
+        Label(self.dashboard_tab, textvariable=self.dashboard_text, justify=LEFT, font=("Consolas", 12)).pack(anchor=W, fill=BOTH)
 
     def add_labeled_entry(self, parent, label, variable):
-        Label(
-            parent,
-            text=label,
-            bg=CARD,
-            fg=MUTED,
-            font=("Segoe UI", 10, "bold"),
-        ).pack(anchor=W, pady=(8, 4))
-
-        entry = Entry(
-            parent,
-            textvariable=variable,
-            bg=CARD_LIGHT,
-            fg=TEXT,
-            insertbackground=TEXT,
-            relief="flat",
-            font=("Segoe UI", 10),
-        )
-
-        entry.pack(fill=X, ipady=8)
+        Label(parent, text=label).pack(anchor=W, pady=(5, 0))
+        Entry(parent, textvariable=variable, width=30).pack(fill=X)
 
     def add_combo(self, parent, label, variable, values):
         Label(parent, text=label).pack(anchor=W, pady=(5, 0))
@@ -511,10 +420,19 @@ class PetShopApp:
 
     def create_appointment(self):
         try:
-            datetime.strptime(self.date_var.get(), "%d/%m/%Y")
-            datetime.strptime(self.time_var.get(), "%H:%M")
+            appointment_date = datetime.strptime(
+                f"{self.date_var.get()} {self.time_var.get()}",
+                "%d/%m/%Y %H:%M"
+            )
         except ValueError:
             messagebox.showerror("Data invalida", "Use data dd/mm/aaaa e hora hh:mm.")
+            return
+
+        if appointment_date < datetime.now():
+            messagebox.showerror(
+                "Data invalida",
+                "Nao e permitido agendar antes da data/hora atual."
+            )
             return
 
         if not self.tutor_var.get().strip() or not self.pet_var.get().strip():
@@ -581,6 +499,31 @@ class PetShopApp:
         self.store.save()
         self.refresh_all()
 
+    def delete_appointment(self):
+        appointment_id = self.selected_tree_id()
+        if appointment_id is None:
+            return
+
+        appointment = self.find_appointment(appointment_id)
+
+        confirm = messagebox.askyesno(
+            "Confirmar exclusao",
+            f"Deseja realmente excluir o atendimento de {appointment.pet}?"
+        )
+
+        if not confirm:
+            return
+
+        self.store.appointments = [
+            item for item in self.store.appointments
+            if item.id != appointment_id
+        ]
+
+        self.store.save()
+        self.refresh_all()
+
+        messagebox.showinfo("Excluido", "Atendimento removido com sucesso.")
+
     def save_product(self):
         try:
             quantity = float(self.product_stock_var.get().replace(",", "."))
@@ -618,33 +561,88 @@ class PetShopApp:
 
     def select_operation(self):
         selected = self.operation_list.curselection()
+
         if not selected:
             return
-        appointment_id = int(self.operation_list.get(selected[0]).split(" - ")[0])
+
+        appointment_id = int(
+            self.operation_list.get(selected[0]).split(" - ")[0]
+        )
+
         appointment = self.find_appointment(appointment_id)
+
         self.selected_appointment_id = appointment_id
-        self.countdown_seconds = appointment.duration * 60
-        self.timer_running = False
-        self.operation_selected_var.set(f"{appointment.pet} | {appointment.service} | {appointment.duration} min")
+
+        # Cada atendimento possui seu proprio timer
+        if appointment_id not in self.appointment_timers:
+            self.appointment_timers[appointment_id] = appointment.duration * 60
+
+        self.countdown_seconds = self.appointment_timers[appointment_id]
+
+        self.timer_running = appointment_id in self.running_timers
+
+        self.operation_selected_var.set(
+            f"{appointment.pet} | {appointment.service} | {appointment.duration} min"
+        )
+
         self.update_timer_label()
 
     def start_timer(self):
         if self.selected_appointment_id is None:
-            messagebox.showwarning("Selecao obrigatoria", "Selecione um servico.")
+            messagebox.showwarning(
+                "Selecao obrigatoria",
+                "Selecione um servico."
+            )
             return
-        self.timer_running = True
-        self.tick_timer()
 
-    def tick_timer(self):
-        if not self.timer_running:
+        appointment_id = self.selected_appointment_id
+
+        if appointment_id in self.running_timers:
             return
-        if self.countdown_seconds > 0:
-            self.countdown_seconds -= 1
-            self.update_timer_label()
-            self.root.after(1000, self.tick_timer)
-        else:
+
+        self.running_timers.add(appointment_id)
+
+        if appointment_id not in self.appointment_timers:
+            appointment = self.find_appointment(appointment_id)
+            self.appointment_timers[appointment_id] = appointment.duration * 60
+
+        self.tick_timer(appointment_id)
+
+    def pause_timer(self):
+        if self.selected_appointment_id is not None:
+            self.running_timers.discard(self.selected_appointment_id)
             self.timer_running = False
-            messagebox.showinfo("Tempo finalizado", "Tempo padrao do atendimento encerrado.")
+
+    def tick_timer(self, appointment_id):
+        if appointment_id not in self.running_timers:
+            return
+
+        if appointment_id not in self.appointment_timers:
+            return
+
+        if self.appointment_timers[appointment_id] > 0:
+            self.appointment_timers[appointment_id] -= 1
+
+            if self.selected_appointment_id == appointment_id:
+                self.countdown_seconds = self.appointment_timers[appointment_id]
+                self.update_timer_label()
+
+            self.root.after(
+                1000,
+                lambda: self.tick_timer(appointment_id)
+            )
+        else:
+            self.running_timers.discard(appointment_id)
+
+            if self.selected_appointment_id == appointment_id:
+                self.timer_running = False
+                self.countdown_seconds = 0
+                self.update_timer_label()
+
+            messagebox.showinfo(
+                "Tempo finalizado",
+                "Tempo padrao do atendimento encerrado."
+            )
 
     def update_timer_label(self):
         minutes, seconds = divmod(self.countdown_seconds, 60)
@@ -666,8 +664,13 @@ class PetShopApp:
 
         appointment.service_status = "Finalizado"
         appointment.intercorrences = [name for name, var in self.intercurrence_vars.items() if var.get() == "1"]
-        self.store.consume_inputs(appointment.service)
+        used_items = self.store.consume_inputs(appointment.service)
         self.store.save()
+        # Resetar timer para 40 minutos
+        self.appointment_timers[self.selected_appointment_id] = 40 * 60
+
+        self.running_timers.discard(self.selected_appointment_id)
+
         self.timer_running = False
         self.selected_appointment_id = None
         for variable in self.intercurrence_vars.values():
