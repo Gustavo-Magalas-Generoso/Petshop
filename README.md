@@ -10,17 +10,20 @@ python petshop_aconchego.py
 
 O programa usa apenas bibliotecas nativas do Python: `tkinter`, `json`, `datetime` e `dataclasses`.
 
-## Funcionalidades entregues
+##Funcionalidades entregues
 
 - Agenda com tempo automatico por raca, porte e servico.
 - Buffer sanitario obrigatorio de 15 minutos.
 - Bloqueio de conflito parcial de horarios considerando duracao e buffer.
 - Agenda por funcionario, com validacao de servicos que cada pessoa executa.
+- Bloqueio de agendamento em data/hora passada.
 - Trava financeira para impedir novo agendamento de pet com pagamento pendente.
+- Cancelamento e exclusao de atendimentos.
 - Estoque com unidade de medida, nivel critico e reposicao.
 - Baixa de insumos ao finalizar servico.
+- Exibicao dos itens utilizados ao finalizar um servico.
 - Registro de intercorrencias pelo operacional.
-- Cronometro regressivo do atendimento.
+- Cronometro regressivo do atendimento com pausa.
 - Perfis de acesso: Gerente, Administrativo e Operacional.
 - Dashboard com taxa de ocupacao geral, ocupacao por funcionario, ruptura de estoque, ticket medio e alertas.
 
