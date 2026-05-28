@@ -10,7 +10,7 @@ python petshop_aconchego.py
 
 O programa usa apenas bibliotecas nativas do Python: `tkinter`, `json`, `datetime` e `dataclasses`.
 
-##Funcionalidades entregues
+## Funcionalidades entregues
 
 - Agenda com tempo automatico por raca, porte e servico.
 - Buffer sanitario obrigatorio de 15 minutos.
